@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt, QEvent, QRect, QPoint
 from PyQt5.QtGui import QGuiApplication
 from PyQt5.QtWidgets import (QWidget, QApplication, QVBoxLayout, QSizePolicy)
  
-CONST_DRAG_BORDER_SIZE = 5
+CONST_DRAG_BORDER_SIZE = 3
  
 class FlatWidget(QWidget):
     
@@ -106,7 +106,7 @@ class FlatWidget(QWidget):
                     new_geom = self.startGeometry
                     new_geom.setX(new_x)
                     new_geom.setY(new_y)
-                    self.setGeometry(new_geom)
+                    self.setGeometry(new_geom)                   
             #左下角
             elif self.dragBottom and self.dragLeft:
                 new_h = globalMousePos.y() - self.startGeometry.y()
@@ -115,15 +115,7 @@ class FlatWidget(QWidget):
                     new_geom = self.startGeometry
                     new_geom.setX(new_x)
                     new_geom.setHeight(new_h)
-                    self.setGeometry(new_geom)
-            elif self.dragBottom and self.dragRight:  #右下角
-                new_h = globalMousePos.y() - self.startGeometry.y()
-                new_w = globalMousePos.x() - self.startGeometry.x()
-                if new_h > 0 and new_w > 0:
-                    new_geom = self.startGeometry
-                    new_geom.setWidth(new_w)
-                    new_geom.setHeight(new_h)
-                    self.setGeometry(new_geom)
+                    self.setGeometry(new_geom)                  
             elif self.dragTop:
                 new_y = globalMousePos.y()
                 if new_y > 0 and new_y < h - 50:
@@ -158,13 +150,15 @@ class FlatWidget(QWidget):
                 self.setCursor(Qt.SizeBDiagCursor)
             elif self.leftBorderHit(globalMousePos) and self.bottomBorderHit(globalMousePos):
                 self.setCursor(Qt.SizeBDiagCursor)
-            elif self.rightBorderHit(globalMousePos) and self.bottomBorderHit(globalMousePos):
-                self.setCursor(Qt.SizeFDiagCursor)
             else:
-                if self.topBorderHit(globalMousePos) or self.bottomBorderHit(globalMousePos):
+                if self.topBorderHit(globalMousePos):
                     self.setCursor(Qt.SizeVerCursor)
-                elif self.leftBorderHit(globalMousePos) or self.rightBorderHit(globalMousePos):
+                elif self.leftBorderHit(globalMousePos):
                     self.setCursor(Qt.SizeHorCursor)
+                elif self.rightBorderHit(globalMousePos):
+                    self.setCursor(Qt.SizeHorCursor)
+                elif self.bottomBorderHit(globalMousePos):
+                    self.setCursor(Qt.SizeVerCursor)
                 else:
                     self.dragTop = False
                     self.dragLeft = False
@@ -199,13 +193,17 @@ class FlatWidget(QWidget):
         return False
     
     def mousePressEvent(self, event):
-        if self.isMaximized():
-            return
-        
+        globalMousePos = self.mapToGlobal(QPoint(event.x(), event.y()))
+        if event.button() == Qt.LeftButton:
+            if event.y() < 30:
+                self._drag_track = True
+                self._startPos = globalMousePos
+
         self.mousePressed = True
         self.startGeometry = self.geometry()
         
-        globalMousePos = self.mapToGlobal(QPoint(event.x(), event.y()))
+        if self.isMaximized():
+            return
         
         if self.leftBorderHit(globalMousePos) and self.topBorderHit(globalMousePos):
             self.dragTop = True
@@ -219,10 +217,6 @@ class FlatWidget(QWidget):
             self.dragLeft = True
             self.dragBottom = True
             self.setCursor(Qt.SizeBDiagCursor)
-        elif self.rightBorderHit(globalMousePos) and self.bottomBorderHit(globalMousePos):
-            self.dragRight = True
-            self.dragBottom = True
-            self.setCursor(Qt.SizeFDiagCursor)
         else:
             if self.topBorderHit(globalMousePos):
                 self.dragTop = True
@@ -236,11 +230,6 @@ class FlatWidget(QWidget):
             elif self.bottomBorderHit(globalMousePos):
                 self.dragBottom = True
                 self.setCursor(Qt.SizeVerCursor)
-
-        if event.button() == Qt.LeftButton:
-            if event.y() < 30:
-                self._drag_track = True
-                self._startPos = QPoint(event.x(), event.y())
                 
     def mouseReleaseEvent(self, event):
         if self.isMaximized():
@@ -261,19 +250,22 @@ class FlatWidget(QWidget):
           
     def mouseMoveEvent(self, event):
         if self._drag_track:
-            self._endPos = event.pos() - self._startPos
+            globalMousePos = self.mapToGlobal(QPoint(event.x(), event.y()))
+            self._endPos = globalMousePos - self._startPos
             if self.isMaximized():
+                x_ratio = globalMousePos.x() / self.width()
+                y_ratio = globalMousePos.y() / self.height()
                 self.showNormal()
+                new_x, new_y = globalMousePos.x() - x_ratio*self.width(), globalMousePos.y()-self._endPos.y()
+                self.move(new_x, new_y)
                 return
             self.move(self.pos() + self._endPos)
+            self._startPos = globalMousePos
 
     def eventFilter(self, watched, event):
-        if self.isMaximized():
-            return QWidget.eventFilter(self, watched, event)
-        
         # 当鼠标在对象上移动时，检查鼠标移动事件
         if event.type() == QEvent.MouseMove and event:
-            self.checkBorderDragging(event)
+            self.checkBorderDragging(event)       
         #只有在frame window上时，才触发按下事件
         elif event.type() == QEvent.MouseButtonPress and watched is self:
             if event:
