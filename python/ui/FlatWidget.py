@@ -1,4 +1,5 @@
 import platform
+import os
 from PyQt5.QtCore import Qt, QEvent, QRect, QPoint
 from PyQt5.QtGui import QGuiApplication
 from PyQt5.QtWidgets import (QWidget, QApplication, QVBoxLayout, QSizePolicy)
@@ -54,7 +55,13 @@ class FlatWidget(QWidget):
         layout.setSpacing(0)
         layout.addWidget(self.windowFrame)
         self.setLayout(layout)
+
+        self.closeEvent = self.Close
             
+    def Close(self, a0):
+        QApplication.instance().quit()
+        os._exit(0)
+
     def onButtonRestoreClicked(self):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.setWindowState(Qt.WindowNoState)

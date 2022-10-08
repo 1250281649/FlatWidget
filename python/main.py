@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 import sys, os
 from PyQt5.QtWidgets import QApplication
 from PyQt5.Qt import *
@@ -63,8 +64,7 @@ class MainFrame(QObject):
 
 
     def Close(self):
-        QApplication.instance().quit()
-        os._exit(0)
+        self.FlatWidget_.Close(NULL)
 
     # ----------------------------------------- UI end ----------------------------------------
     def SetCurrentTime(self):
